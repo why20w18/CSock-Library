@@ -20,7 +20,7 @@ public:
     void csock_closeAllClient(std::unordered_map<int,bool>& socketsMap);
     
     //bind zaten cross platformdur
-    
+    bool csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize);
     
     void csockMessage(const char *msg,CSOCKS_INFO_LEVEL il=CSOCKS_INFO,const char *currentFilename="MANUEL");
 

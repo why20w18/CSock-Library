@@ -60,13 +60,23 @@ void csockManuel::csock_closeAllClient(std::unordered_map<int,bool>& socketsMap)
 }
 
 
+bool csockManuel::csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize){
+    int bindStatus = bind(socketFD,(sockaddr*)socketConfig,socketConfigSize);
+    if(bindStatus == -1){
+        csockMessage("SOCKET NOT BINDED",CSOCKS_ERROR);
+        return false;
+    }
+    return true;
+}
+
+
 void csockManuel::csockMessage(const char *msg,CSOCKS_INFO_LEVEL il,const char *currentFilename){
     switch(il){
         case CSOCKS_INFO: std::cout << "[CSOCK-"<< currentFilename <<"-INFO] : " << msg << "\n";
         break;
 
         case CSOCKS_ERROR:
-        std::cout << "[CSOCK-"<< currentFilename <<"-ERROR] : " << msg << "\n";
+        std::cerr << "[CSOCK-"<< currentFilename <<"-ERROR] : " << msg << "\n";
         break;
 
         case CSOCKS_WARNING:

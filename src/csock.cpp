@@ -68,7 +68,7 @@ bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
         return true;
     }
     else
-        csockManuel::csockMessage("SOCKET NOT SERVER MODE",CSOCKS_ERROR);
+        csockManuel::csockMessage("SOCKET NOT SERVER MODE",CSOCKS_ERROR,"BASE");
     return false;
 }
 
