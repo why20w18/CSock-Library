@@ -4,7 +4,7 @@
 std::unordered_map<int,bool> csock::socketsMap; //static define
 
 //default olarak tcp/ipv4 olarak baslatir
-csock::csock(){
+CONFIG_INIT csock::csock(){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -22,7 +22,7 @@ csock::csock(){
 
 
 //manuel constructor
-csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
+CONFIG_INIT csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -38,8 +38,9 @@ csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
     socketsMap[socketFD] = isServer;
 }
 
-//client icin yazilmis constructor otomatik baglanir
-csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo){
+//client icin yazilmis constructor otomatik baglanir 
+//configurasyon gerektirmeyen constructor
+DIRECT_INIT csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -59,6 +60,28 @@ csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,u
 
 csock::~csock(){
     csock_close(socketFD,false);
+}
+
+int csock::sendData(const char *data){
+    int sendedBytes = -1;
+    if(isServer)
+        sendedBytes = csock_send(clientFD,data,strlen(data));
+    else 
+        sendedBytes = csock_send(socketFD,data,strlen(data));
+
+    return sendedBytes;
+}
+
+int csock::recvData(char *recvMessage,int recvMessageSize){
+    memset(recvMessage,0,recvMessageSize);
+    int receivedBytes = -1;
+    
+    if(isServer)
+        receivedBytes = csock_recv(clientFD,recvMessage,recvMessageSize);
+    else 
+        receivedBytes = csock_recv(socketFD,recvMessage,recvMessageSize);
+
+    return receivedBytes;
 }
 
 
@@ -106,10 +129,10 @@ bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
         std::cout << msgTitle << std::endl;
         while(1){
 
-            this->clientFD = accept(socketFD,(sockaddr*)&connectedClientConfig,&t_clientConnected);
+            this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
             std::cout << loopMsg << "\n";
             char buffer[1024];
-            memset(buffer,0,1024);
+            
             
 
             csockManuel::csock_inetNtop(initIP_V4_V6,&connectedClientConfig.sin_addr,buffer);
@@ -125,6 +148,9 @@ bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
     return false;
 }
 
+bool csock::connectServer(){
+    
+}
 
 
 //soketi yapilandirmaya baglama ama server

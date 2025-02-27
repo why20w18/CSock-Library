@@ -13,16 +13,20 @@ protected:
     const char* csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer , socklen_t bufferSize = INET_ADDRSTRLEN);
     
     //soket olusturup filedescriptor cevirir
-    int csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp);
+    FILE_DESCRIPTOR csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp);
+    FILE_DESCRIPTOR csock_accept(int serverFD,struct sockaddr_in *connectedConfig,socklen_t *connectedConfigSize);
     
     //soketi kapatma
     void csock_close(int socketFD,bool cleanUp=false);
     void csock_closeAllClient(std::unordered_map<int,bool>& socketsMap);
     
-    //bind zaten cross platformdur ama parametreler kolaylastirildi
+    //bind zaten cross platformdur , parametreler duzenlendi
     bool csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize);
     bool csock_listener();
     
+    int csock_send(int socketFD,const char *data,unsigned int dataLength);
+    int csock_recv(int socketFD,char *recvDataBuffer , unsigned int recvDataSize);
+
     void csockMessage(const char *msg,CSOCKS_INFO_LEVEL il=CSOCKS_INFO,const char *currentFilename="MANUEL");
 
 };

@@ -10,7 +10,7 @@ const char* csockManuel::csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,
     #endif
 }
 
-int csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp){
+FILE_DESCRIPTOR csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp){
     int socketFD = -1;
 
     #ifdef CSOCK_PLATFORM_IS_WIN32
@@ -73,6 +73,37 @@ bool csockManuel::csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsig
 
 bool csockManuel::csock_listener(){
     DEBUG("DEFINE EDILMEDI !");
+}
+
+int csockManuel::csock_send(int socketFD,const char *data,unsigned int dataLength){
+    int sendedBytes = send(socketFD,data,dataLength,0);
+    if(sendedBytes == -1){
+        csockMessage("NOT SENDED DATA",CSOCKS_ERROR);
+        return -1;
+    }
+
+    return sendedBytes;
+}
+
+int csockManuel::csock_recv(int socketFD,char *recvDataBuffer , unsigned int recvDataSize){
+    int receivedBytes = recv(socketFD,recvDataBuffer,recvDataSize,0); //server accept ile acilan soket uzerinden
+                                                                     //client dogrudan kendi soketinden
+    if(receivedBytes == -1){
+        csockMessage("NOT RECEIVED DATA",CSOCKS_ERROR);
+        return -1;
+    }
+    return receivedBytes;
+}
+
+
+FILE_DESCRIPTOR csockManuel::csock_accept(int serverFD,struct sockaddr_in *connectedConfig,socklen_t *connectedConfigSize){
+    int channelSocket = accept(serverFD,(struct sockaddr*)connectedConfig,connectedConfigSize);
+    if(channelSocket == -1){
+        csockMessage("NOT ACCEPTED CLIENT",CSOCKS_ERROR);
+        return -1;
+    }
+
+    return channelSocket;
 }
 
 

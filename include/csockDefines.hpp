@@ -4,6 +4,10 @@
 
 #include "csockPlatform.hpp"
 
+typedef int FILE_DESCRIPTOR;
+#define DIRECT_INIT
+#define CONFIG_INIT
+
 enum CSOCKS_INIT{
     IPV4 = AF_INET,
     IPV6 = AF_INET6,
