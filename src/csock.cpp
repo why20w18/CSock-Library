@@ -3,6 +3,25 @@
 
 std::unordered_map<int,bool> csock::socketsMap; //static define
 
+//default olarak tcp/ipv4 olarak baslatir
+csock::csock(){
+    this->optActive = 1;
+    this->optDeactive = 0;
+
+    this->initIP_V4_V6 = IPV4;
+    this->initTCP_UDP = TCP;
+
+    this->isServer = false;
+    this->serverBacklog = 0;
+
+    this->socketFD = csockManuel::csock_socket(IPV4,TCP);
+    
+    t_clientConnected = sizeof(connectedClientConfig); 
+    socketsMap[socketFD] = isServer;
+}
+
+
+//manuel constructor
 csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
     this->optActive = 1;
     this->optDeactive = 0;
@@ -19,12 +38,31 @@ csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
     socketsMap[socketFD] = isServer;
 }
 
-csock::~csock(){
-    csock_close(socketFD,true);
+//client icin yazilmis constructor otomatik baglanir
+csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo){
+    this->optActive = 1;
+    this->optDeactive = 0;
+
+    this->initIP_V4_V6 = ipv4_ipv6;
+    this->initTCP_UDP = tcp_udp;
+
+    this->isServer = false;
+    this->serverBacklog = 0;
+
+    this->socketFD = csockManuel::csock_socket(ipv4_ipv6,tcp_udp);
+    
+    socketsMap[socketFD] = isServer;
+    setServerSocketConfig(connectIP,connectPortNo);
+    connect(socketFD,(struct sockaddr*)&sockConnectConfig,sizeof(sockConnectConfig));
 }
 
 
-sockaddr_in* csock::setServerSocketConfig(const char *ipAddr,unsigned int portNo,bool thisSocket){
+csock::~csock(){
+    csock_close(socketFD,false);
+}
+
+
+sockaddr_in* csock::setServerSocketConfig(const char *ipAddr,unsigned int portNo){
     this->sockServerConfig.sin_family = this->initIP_V4_V6;
     this->sockServerConfig.sin_port = htons(portNo);
     this->sockServerConfig.sin_addr.s_addr = inet_addr(ipAddr);
@@ -38,6 +76,21 @@ void csock::setServer(unsigned int serverBacklog){
     this->isServer = true;
     this->socketsMap[socketFD] = isServer;
 }
+
+sockaddr_in* csock::setConnectedServerConfig(const char *connectIpAddr, unsigned int portNo){
+    if(this->isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCKS_ERROR,"BASE");
+        return nullptr;
+    }
+
+    this->sockConnectConfig.sin_family = initIP_V4_V6;
+    this->sockConnectConfig.sin_addr.s_addr = inet_addr(connectIpAddr);
+    this->sockConnectConfig.sin_port = htons(portNo);
+    memset(&this->sockConnectConfig.sin_zero,0,8);
+
+    return &sockConnectConfig;
+}
+
 
 
 
@@ -73,15 +126,10 @@ bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
 }
 
 
+
 //soketi yapilandirmaya baglama ama server
 bool csock::bindServerSock(){
-    int bindStatus = bind(this->socketFD,(sockaddr*)&sockServerConfig,sizeof(sockServerConfig));
-    if(bindStatus == -1){
-        std::cerr << "SERVER BIND PROBLEM" << std::endl;
-        return false;
-    }
-
-    return true;
+    return csockManuel::csock_bind(socketFD,&sockServerConfig,sizeof(sockServerConfig));
 }
 
 void csock::socketInfo(){

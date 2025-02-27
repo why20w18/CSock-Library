@@ -8,8 +8,8 @@ using namespace std;
 int main(){
 
     csock serverSocket(TCP,IPV4);
-    serverSocket.setServer(10);
-    sockaddr_in *serverConfig = serverSocket.setServerSocketConfig("127.0.0.1",8085,true);
+    serverSocket.setServer(DEFAULT_BACKLOG);
+    sockaddr_in *serverConfig = serverSocket.setServerSocketConfig("127.0.0.1",8085);
     serverSocket.bindServerSock();
 
     //NFO

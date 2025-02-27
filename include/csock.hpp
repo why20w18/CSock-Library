@@ -23,6 +23,7 @@ private:
     bool isServer;                                                  //server degilse listen edemesin
     unsigned int serverBacklog;
 
+    //SOKETIN ORTAK OZELLIKLERI BIR NESNE YA SERVER YADA CLIENT OLABILIR
     int initTCP_UDP;
     int initIP_V4_V6;
     
@@ -31,24 +32,27 @@ private:
 
 
 public:
-    csock(CSOCKS_INIT tcp_udp = TCP, CSOCKS_INIT ipv4_ipv6 = IPV4);               //soketi otomatik yapilandirma
+    csock();                                 //default olarak ipv4 ve tcp konfigurasyonu ile baslatma  ->server or client
+    csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6);//soketi manuel olarak yapilandirma ->server or client
+    csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo); //->client
     ~csock();                                                                     //destructor
 
 
     bool setSockOptions(int socketfd,CSOCKS_OPTIONS re_opt);         //socket set options re use port-ip
     void setServer(unsigned int serverBacklog);                      //soketi servera cevirme
   
-    sockaddr_in* setServerSocketConfig(const char *ipAddr,unsigned int portNo,bool thisSocket);
-    sockaddr_in* connectedServerConfig(const char *connectIpAddr, unsigned int portNo);
+    sockaddr_in* setServerSocketConfig(const char *ipAddr,unsigned int portNo);
+    sockaddr_in* setConnectedServerConfig(const char *connectIpAddr, unsigned int portNo);
 
     bool bindServerSock();
     bool serverRequester(const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
-    
+    bool connectServer();
+
     bool sendData(const char *data);                                //hem server hem client
-    bool sendData(int data);                                        //hem server hem client
     bool recvData();                                                //hem server hem client
 
-    int getSocketFD();                                              //soketi geri cevirir
+
+    int getSocketFD();                                              //nesnenin kendisine atanmis soketi cevirir
     int* active();
     int* deactive();
 

@@ -30,8 +30,9 @@ int csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp){
             return -1;
         }
 
-        return socketFD;
     #endif
+
+    return socketFD;
 }
 
 //1 socket
@@ -61,13 +62,19 @@ void csockManuel::csock_closeAllClient(std::unordered_map<int,bool>& socketsMap)
 
 
 bool csockManuel::csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize){
-    int bindStatus = bind(socketFD,(sockaddr*)socketConfig,socketConfigSize);
+    int bindStatus = bind(socketFD,(struct sockaddr*)socketConfig,socketConfigSize);
     if(bindStatus == -1){
         csockMessage("SOCKET NOT BINDED",CSOCKS_ERROR);
         return false;
     }
     return true;
 }
+
+
+bool csockManuel::csock_listener(){
+    DEBUG("DEFINE EDILMEDI !");
+}
+
 
 
 void csockManuel::csockMessage(const char *msg,CSOCKS_INFO_LEVEL il,const char *currentFilename){

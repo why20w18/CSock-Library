@@ -8,7 +8,7 @@
 class csockManuel{
     /////////////////       /////   CSOCK MANUEL CROSS FUNCTION       /////   /////////////////
 
-public:
+protected:
     //internet to presentation => sayisal ip adresini stringe cevirir
     const char* csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer , socklen_t bufferSize = INET_ADDRSTRLEN);
     
@@ -19,8 +19,9 @@ public:
     void csock_close(int socketFD,bool cleanUp=false);
     void csock_closeAllClient(std::unordered_map<int,bool>& socketsMap);
     
-    //bind zaten cross platformdur
+    //bind zaten cross platformdur ama parametreler kolaylastirildi
     bool csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize);
+    bool csock_listener();
     
     void csockMessage(const char *msg,CSOCKS_INFO_LEVEL il=CSOCKS_INFO,const char *currentFilename="MANUEL");
 
