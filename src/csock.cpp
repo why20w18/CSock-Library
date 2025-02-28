@@ -88,6 +88,17 @@ int csock::sendData(const char *data){
     return sendedBytes;
 }
 
+int csock::sendData(int newClientFD,int newServerFD,const char *data){
+    int sendedBytes = -1;
+    if(isServer)
+        sendedBytes = csock_send(newClientFD,data,strlen(data));
+    else 
+        sendedBytes = csock_send(newServerFD,data,strlen(data));
+
+    return sendedBytes;
+}
+    
+
 int csock::recvData(char *recvMessage,int recvMessageSize){
     memset(recvMessage,0,recvMessageSize);
     int receivedBytes = -1;
@@ -101,11 +112,24 @@ int csock::recvData(char *recvMessage,int recvMessageSize){
     return receivedBytes;
 }
 
+int csock::recvData(int newClientFD,int newServerFD,char *recvMessage,int recvMessageSize){
+    memset(recvMessage,0,recvMessageSize);
+    int receivedBytes = -1;
+    
+    if(isServer)
+        receivedBytes = csock_recv(newClientFD,recvMessage,recvMessageSize);
+    else{
+        receivedBytes = csock_recv(newServerFD,recvMessage,recvMessageSize);        
+    }
+        
+    return receivedBytes;
+}
+    
+
 
 sockaddr_in* csock::setServerSocketConfig(const char *ipAddr,unsigned int portNo){
     if(this->isSockConfigSet){
         csockManuel::csockMessage("CONFIG ALREADY SETTED !",CSOCK_WARNING,"BASE");
-        return nullptr;
     }
     this->sockServerConfig.sin_family = this->initIP_V4_V6;
     this->sockServerConfig.sin_port = htons(portNo);
@@ -129,7 +153,6 @@ sockaddr_in* csock::setConnectedServerConfig(const char *connectIpAddr, unsigned
     
     if(this->isSockConfigSet){
         csockManuel::csockMessage("CONFIG ALREADY SETTED !",CSOCK_WARNING,"BASE");
-        return nullptr;
     }
 
     this->sockConnectConfig.sin_family = initIP_V4_V6;
@@ -158,19 +181,21 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
         std::cout << msgTitle << std::endl;
         std::string responseMessageFromServer;
         while(1){
-
-            this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
-      
             std::cout << loopMsg << "\n";
-
             char buffer[1024];
-
+            this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
+            if(clientFD == -1){
+                csockManuel::csockMessage("NOT FOUND REQUEST !",CSOCK_INFO,"BASE");
+                csock_sleep(2);
+                continue; //eger istek yoksa server calismaya devam etsin beklesin
+            }
+            else //baglanti yoksada almak icin bosa beklemesin
             while(1){
 
                 int reciviedBytes = recvData(buffer,sizeof(buffer));
                 if(reciviedBytes <= 0){
                     csockManuel::csockMessage("CLIENT CONNECTION LOSTED",CSOCK_INFO,"BASE");
-                    return false;
+                    break; //mevcut client baglantisini islemeyi biraktik
                 }
                     
                 std::cout << "ALINAN BYTE : " << reciviedBytes << "\n";
@@ -200,6 +225,76 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
     return false;
 }
 
+
+
+
+bool csock::serverResponserThread(bool isInputed,const char *msgTitle,const char *loopMsg){
+    if(!isServer){
+        csockManuel::csockMessage("SOCKET NOT SERVER MODE",CSOCK_ERROR,"BASE");
+        return false;
+    }
+    std::cout << msgTitle << "\n";
+    
+    int listenStatus = listen(socketFD,serverBacklog);
+    if(listenStatus == -1){
+        csockManuel::csockMessage("SERVER NOT LISTENED !",CSOCK_ERROR,"BASE");
+        return false;
+    }
+    
+    while(1){
+        //server gelen istekleri surekli alacak
+        //server surekli ayni clientFD'yi kullanirsa her thread sadece 1 tanesiyle iletisimde kalir digerleri bosta kalir
+        int newClientFD = csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
+        if(clientFD == -1){
+            csockManuel::csockMessage("NOT FOUND REQUEST CLIENT",CSOCK_ERROR,"BASE");
+            csock_sleep(2); //eger istek yoksa 2 saniye beklesin tekrar istek var mi kontrol etsin
+            continue;
+        }
+        else{
+            csockManuel::csockMessage(loopMsg,CSOCK_INFO,"BASE");
+
+            //
+            std::thread clientProcessor([this,&isInputed,newClientFD](){
+                    this->serverNewConnectionProcessThread(isInputed,newClientFD);
+            });
+            clientProcessor.detach();
+
+        }
+    }
+    return true;
+}
+void csock::serverNewConnectionProcessThread(bool isInputed,int newClientFD){
+    char buffer[1024];
+    std::string serverResponseMessage;
+    while(1){
+        if(isInputed){
+            std::cout << "SERVER INPUT : ";
+            std::getline(std::cin,serverResponseMessage);
+        }
+        else
+            serverResponseMessage = "SERVER AUTO RESPONSE MESSAGE";
+        
+        int sendedBytes = sendData(newClientFD,socketFD,serverResponseMessage.c_str());
+        if(sendedBytes == -1)
+            csockManuel::csockMessage("NOT SENDED DATA",CSOCK_ERROR,"BASE");
+    
+        int receivedBytes = recvData(newClientFD,socketFD,buffer,sizeof(buffer));
+        if(receivedBytes <= 0){
+            csockManuel::csockMessage("CLIENT LOST CONNECTION",CSOCK_ERROR,"BASE");
+            return;
+        }        
+            
+        std::cout << "RECV DATA : " << buffer << " | BYTE : " << receivedBytes << "\n";
+        std::cout << "SEND DATA : " << serverResponseMessage << " | BYTE : " << sendedBytes << "\n";
+
+        csockManuel::csock_inetNtop(initIP_V4_V6, &connectedClientConfig.sin_addr, buffer);
+        DEBUG("FILE DESCRIPTOR : " << newClientFD << " STR_IP : " << buffer); 
+    }
+
+}
+
+
+
 void csock::clientRequester(bool isClientInputed){
     if(isServer){
         csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_ERROR,"BASE");
@@ -211,8 +306,6 @@ void csock::clientRequester(bool isClientInputed){
     
     if(this->clientConnectType == CSOCK_ONCE){
         if(!isClientInputed){
-            memset(recvMessage,0,sizeof(recvMessage));
-
             sendData("REQUEST FROM CLIENT");
             recvData(recvMessage,sizeof(recvMessage));
             
@@ -220,7 +313,6 @@ void csock::clientRequester(bool isClientInputed){
             std::cout << "AUTO RECV   DATA : " << recvMessage << "\n";
         }
         else{
-            memset(recvMessage,0,sizeof(recvMessage));
             std::string userInput;
             std::cout << "USER INPUT : ";
             std::getline(std::cin,userInput);
@@ -235,8 +327,6 @@ void csock::clientRequester(bool isClientInputed){
     else if(this->clientConnectType == CSOCK_STAY){
         while(1){
             if(!isClientInputed){
-                memset(recvMessage,0,sizeof(recvMessage));
-
                 sendData("REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL");
                 recvData(recvMessage,sizeof(recvMessage));
                 
@@ -249,7 +339,6 @@ void csock::clientRequester(bool isClientInputed){
                 csock_sleep(1);
             }
             else{
-                memset(recvMessage,0,sizeof(recvMessage));
                 std::string userInput;
                 std::cout << "USER INPUT : ";
                 std::getline(std::cin,userInput);
@@ -266,6 +355,67 @@ void csock::clientRequester(bool isClientInputed){
 
     }
 
+}
+
+void csock::clientRequesterThread(int newClientFD,bool isClientInputed){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_ERROR,"BASE");
+        return;
+    }
+
+    char recvMessage[1024];
+    short i = 0;
+    
+    if(this->clientConnectType == CSOCK_ONCE){
+        if(!isClientInputed){
+            sendData("REQUEST FROM CLIENT");
+            recvData(recvMessage,sizeof(recvMessage));
+            
+            std::cout << "AUTO SENDED DATA : " << "REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL" << "\n";
+            std::cout << "AUTO RECV   DATA : " << recvMessage << "\n";
+        }
+        else{
+            std::string userInput;
+            std::cout << "USER INPUT : ";
+            std::getline(std::cin,userInput);
+            sendData(userInput.c_str());
+            recvData(recvMessage,sizeof(recvMessage));
+
+            std::cout << "SENDED DATA : " << userInput << "\n";
+            std::cout << "RECV   DATA : " << recvMessage << "\n";
+        }
+
+    }
+    else if(this->clientConnectType == CSOCK_STAY){
+        while(1){
+            if(!isClientInputed){
+                sendData("REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL");
+                recvData(recvMessage,sizeof(recvMessage));
+                
+                std::cout << "AUTO SENDED DATA : " << "REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL" << "\n";
+                std::cout << "AUTO RECV   DATA : " << recvMessage << "\n";
+                i++;
+                if(i == 5)
+                    break;
+                
+                csock_sleep(1);
+            }
+            else{
+                std::string userInput;
+                std::cout << "USER INPUT : ";
+                std::getline(std::cin,userInput);
+                sendData(userInput.c_str());
+                recvData(recvMessage,sizeof(recvMessage));
+
+                std::cout << "SENDED DATA : " << userInput << "\n";
+                std::cout << "RECV   DATA : " << recvMessage << "\n";
+
+                if(userInput == "exit")
+                    break;
+            }
+        }
+
+    }
 }
 
 

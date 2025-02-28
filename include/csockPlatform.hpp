@@ -7,6 +7,7 @@
     #include <ws2tcpip.h>
     #include <cstring>
     #include <windows.h>
+    #include <thread>
 
     #pragma comment(lib, "ws2_32.lib")
     
@@ -18,9 +19,10 @@
     #include <sys/socket.h> //socket , bind , accept
     #include <arpa/inet.h>  //inet_addr
     #include <cstring>      //memset
-    #include <unistd.h>     //close
+    #include <unistd.h>     //close , sleep
     #include <netinet/in.h> //struct sockaddr_in
-    
+    #include <thread>
+
 
     #define DEBUG(x) std::cout << "[DEBUG-MODE] : " << x << "\n"
     #define CSOCK_PLATFORM_IS_UNIX 

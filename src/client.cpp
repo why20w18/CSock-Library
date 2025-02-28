@@ -18,7 +18,7 @@ int main(){
 
 
 
-    //(2) MANUEL BASLATMA - SOCKET CONFIG ALREADY SETTED ERR
+    //(2) MANUEL BASLATMA - SOCKET CONFIG ALREADY SETTED ERR (DEGISTIRILDI SADECE INFO VERIYOR)
     /*
     csock clientSocket; //tcp ipv4 olarak basladi
     clientSocket.setConnectedServerConfig("127.0.0.1",8085);
@@ -68,7 +68,7 @@ int main(){
 
     //(6) STAY MODDA OTOMATIK MESAJ GONDERME
     /*
-    csock clientSocket; //manuel baslattik
+    csock clientSocket; //otomatik tcp ipv4 basladi
     clientSocket.setConnectedServerConfig("127.0.0.1",8085);
     clientSocket.setClientConnection(CSOCK_STAY);   //stay moda aldik
     clientSocket.connectServer();
@@ -81,14 +81,20 @@ int main(){
 
 
     //(7) STAY MODDA CLIENT MESAJ GONDERSIN
-    csock clientSocket; //manuel baslattik
-    clientSocket.setConnectedServerConfig("127.0.0.1",8085);
+    /*
+    csock clientSocket; //otomatik tcp ipv4 basladi
+    sockaddr_in *clientConnectedServerCFG = clientSocket.setConnectedServerConfig("127.0.0.1",8085);
     clientSocket.setClientConnection(CSOCK_STAY);   //stay moda aldik
     clientSocket.connectServer();
-    clientSocket.clientRequester(true); //otomatik mesaj gonderecek
+    clientSocket.clientRequester(true); //otomatik mesaj gondermeyecek client girdi girmeli
     clientSocket.socketInfo();
-
+    */
     
+    //(8) STAY MODDA MULTITHREAD SERVERA BIRDEN FAZLA MESAJ YOLLAMA
+    csock clientSocket(TCP,IPV4,"127.0.0.1",CSOCK_DEFAULT_PORT,CSOCK_STAY);
+    clientSocket.clientRequester(true);
+    
+
 
 
 

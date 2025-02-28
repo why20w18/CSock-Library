@@ -31,6 +31,7 @@ private:
     int optDeactive;
 
     CSOCK_CONNECTION_OPTIONS clientConnectType;
+    void serverNewConnectionProcessThread(bool isInputed,int newClientFD);
 
 
 public:
@@ -50,22 +51,29 @@ public:
    
     bool bindServerSock();
     bool serverResponser(bool isInputed = false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
-    bool serverResponserThread(const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
-
+    bool serverResponserThread(bool isInputed = false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
+    
 
     CONFIG_INIT bool connectServer();   //konfigurasyondan sonra baslatma
     DIRECT_INIT bool connectServer(const char *connectIP,unsigned int connectPortNo); //konfigurasyonu icinde baslatir
-   
+
+    //CLASS ICINDEKI MEMBERLAR UZERINDEN CALISIR
     int sendData(const char *data);                                                       //hem server hem client
     int recvData(char *recvMessage,int recvMessageSize);                                   //hem server hem client
 
+    //ISTENEN FILE DESCRIPTORA GORE CALISIR THREAD KISIM ICIN YAZILDI
+    int sendData(int newClientFD,int newServerFD,const char *data);                             //hem server hem client
+    int recvData(int newClientFD,int newServerFD,char *recvMessage,int recvMessageSize);        //hem server hem client
     
+
     
     //CLIENT BAGLANTISI NASIL KURULACAK//
     //default olarak baglanip yapacagi islemi yapip baglantiyi kapatir
     void setClientConnection(CSOCK_CONNECTION_OPTIONS once_stay);
 
     void clientRequester(bool isClientInputed = false);
+    void clientRequesterThread(int newClientFD,bool isClientInputed = false);
+    
 
 
 
