@@ -3,3 +3,4 @@ build-win32/
 .vscode/
 utils-WIN32/
 utils-WIN32/win32-dll
+win32-test/

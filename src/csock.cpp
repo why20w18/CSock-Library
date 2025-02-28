@@ -13,16 +13,20 @@ CONFIG_INIT csock::csock(){
 
     this->isServer = false;
     this->serverBacklog = 0;
+    this->isSockConfigSet = false;
+    this->clientConnectType = CSOCK_ONCE;
+
 
     this->socketFD = csockManuel::csock_socket(IPV4,TCP);
     
     t_clientConnected = sizeof(connectedClientConfig); 
     socketsMap[socketFD] = isServer;
+
 }
 
 
 //manuel constructor
-CONFIG_INIT csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
+CONFIG_INIT csock::csock(CSOCK_INIT tcp_udp, CSOCK_INIT ipv4_ipv6){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -31,6 +35,9 @@ CONFIG_INIT csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
 
     this->isServer = false;
     this->serverBacklog = 0;
+    this->isSockConfigSet = false;
+    this->clientConnectType = CSOCK_ONCE;
+
 
     this->socketFD = csockManuel::csock_socket(ipv4_ipv6,tcp_udp);
     
@@ -40,7 +47,8 @@ CONFIG_INIT csock::csock(CSOCKS_INIT tcp_udp, CSOCKS_INIT ipv4_ipv6){
 
 //client icin yazilmis constructor otomatik baglanir 
 //configurasyon gerektirmeyen constructor
-DIRECT_INIT csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo){
+DIRECT_INIT csock::csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo
+    ,CSOCK_CONNECTION_OPTIONS once_stay){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -51,10 +59,18 @@ DIRECT_INIT csock::csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char 
     this->serverBacklog = 0;
 
     this->socketFD = csockManuel::csock_socket(ipv4_ipv6,tcp_udp);
+    t_clientConnected = sizeof(connectedClientConfig); 
+    this->isSockConfigSet = false;
+    this->clientConnectType = once_stay;
+
     
     socketsMap[socketFD] = isServer;
-    setServerSocketConfig(connectIP,connectPortNo);
-    connect(socketFD,(struct sockaddr*)&sockConnectConfig,sizeof(sockConnectConfig));
+    setConnectedServerConfig(connectIP,connectPortNo);
+    int connectStatus = connect(socketFD,(struct sockaddr*)&sockConnectConfig,sizeof(sockConnectConfig));
+    if(connectStatus == -1){
+        csockManuel::csockMessage("CONNECTION PROBLEM",CSOCK_ERROR,"BASE");
+        std::cerr << errno << "\n";
+    }
 }
 
 
@@ -78,19 +94,24 @@ int csock::recvData(char *recvMessage,int recvMessageSize){
     
     if(isServer)
         receivedBytes = csock_recv(clientFD,recvMessage,recvMessageSize);
-    else 
-        receivedBytes = csock_recv(socketFD,recvMessage,recvMessageSize);
-
+    else{
+        receivedBytes = csock_recv(socketFD,recvMessage,recvMessageSize);        
+    }
+        
     return receivedBytes;
 }
 
 
 sockaddr_in* csock::setServerSocketConfig(const char *ipAddr,unsigned int portNo){
+    if(this->isSockConfigSet){
+        csockManuel::csockMessage("CONFIG ALREADY SETTED !",CSOCK_WARNING,"BASE");
+        return nullptr;
+    }
     this->sockServerConfig.sin_family = this->initIP_V4_V6;
     this->sockServerConfig.sin_port = htons(portNo);
     this->sockServerConfig.sin_addr.s_addr = inet_addr(ipAddr);
     memset(this->sockServerConfig.sin_zero,0,8);
-
+    this->isSockConfigSet = true;
     return &sockServerConfig;
 }
 
@@ -102,7 +123,12 @@ void csock::setServer(unsigned int serverBacklog){
 
 sockaddr_in* csock::setConnectedServerConfig(const char *connectIpAddr, unsigned int portNo){
     if(this->isServer){
-        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCKS_ERROR,"BASE");
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_ERROR,"BASE");
+        return nullptr;
+    }
+    
+    if(this->isSockConfigSet){
+        csockManuel::csockMessage("CONFIG ALREADY SETTED !",CSOCK_WARNING,"BASE");
         return nullptr;
     }
 
@@ -111,13 +137,15 @@ sockaddr_in* csock::setConnectedServerConfig(const char *connectIpAddr, unsigned
     this->sockConnectConfig.sin_port = htons(portNo);
     memset(&this->sockConnectConfig.sin_zero,0,8);
 
+    this->isSockConfigSet = true;
+
     return &sockConnectConfig;
 }
 
 
 
 
-bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
+bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loopMsg){
     if(isServer){
         int listenStaus = listen(this->socketFD,this->serverBacklog);
         if(listenStaus == -1){
@@ -126,31 +154,166 @@ bool csock::serverRequester(const char *msgTitle,const char *loopMsg){
         }
 
         //server requester loop
+        int sendedBytes = 0;
         std::cout << msgTitle << std::endl;
+        std::string responseMessageFromServer;
         while(1){
 
             this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
+            if(clientFD == -1){
+                csockManuel::csockMessage("SOCKET NOT ACCEPTED !",CSOCK_ERROR,"BASE");
+                return false;
+            }
             std::cout << loopMsg << "\n";
+
             char buffer[1024];
-            
-            
 
-            csockManuel::csock_inetNtop(initIP_V4_V6,&connectedClientConfig.sin_addr,buffer);
+            while(1){
 
-            DEBUG("FILE DESCRIPTOR : " << clientFD << " STR_IP : " << buffer);
+                int reciviedBytes = recvData(buffer,sizeof(buffer));
+                if(reciviedBytes <= 0){
+                    csockManuel::csockMessage("CLIENT CONNECTION LOSTED",CSOCK_INFO,"BASE");
+                    break;
+                }
+                    
+                std::cout << "ALINAN BYTE : " << reciviedBytes << "\n";
+                if(!isInputed)
+                    responseMessageFromServer = "SERVER OTOMATIK MESAJI KULLANICI GIRDISIZ";
+                else{
+                    std::cout << "\nSERVER INPUT : ";
+                    
+                    std::getline(std::cin,responseMessageFromServer);
+                } 
+                sendedBytes = sendData(responseMessageFromServer.c_str());
+
+                std::cout << "GONDERILEN MESAJ : " << responseMessageFromServer << "\n";    
+                std::cout << "GONDERILEN BYTE : " << send << "\n";
+                std::cout << "GELEN MESAJ     : " << buffer << "\n";
+                
+                csockManuel::csock_inetNtop(initIP_V4_V6,&connectedClientConfig.sin_addr,buffer);
+    
+                DEBUG("FILE DESCRIPTOR : " << clientFD << " STR_IP : " << buffer);
+            }
+            
         }
-
-
         return true;
     }
     else
-        csockManuel::csockMessage("SOCKET NOT SERVER MODE",CSOCKS_ERROR,"BASE");
+        csockManuel::csockMessage("SOCKET NOT SERVER MODE",CSOCK_ERROR,"BASE");
     return false;
 }
 
-bool csock::connectServer(){
+void csock::clientRequester(bool isClientInputed){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_ERROR,"BASE");
+        return;
+    }
+
+    char recvMessage[1024];
+    short i = 0;
     
+    if(this->clientConnectType == CSOCK_ONCE){
+        if(!isClientInputed){
+            memset(recvMessage,0,sizeof(recvMessage));
+
+            sendData("REQUEST FROM CLIENT");
+            recvData(recvMessage,sizeof(recvMessage));
+            
+            std::cout << "AUTO SENDED DATA : " << "REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL" << "\n";
+            std::cout << "AUTO RECV   DATA : " << recvMessage << "\n";
+        }
+        else{
+            memset(recvMessage,0,sizeof(recvMessage));
+            std::string userInput;
+            std::cout << "USER INPUT : ";
+            std::getline(std::cin,userInput);
+            sendData(userInput.c_str());
+            recvData(recvMessage,sizeof(recvMessage));
+
+            std::cout << "SENDED DATA : " << userInput << "\n";
+            std::cout << "RECV   DATA : " << recvMessage << "\n";
+        }
+
+    }
+    else if(this->clientConnectType == CSOCK_STAY){
+        while(1){
+            if(!isClientInputed){
+                memset(recvMessage,0,sizeof(recvMessage));
+
+                sendData("REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL");
+                recvData(recvMessage,sizeof(recvMessage));
+                
+                std::cout << "AUTO SENDED DATA : " << "REQUEST FROM CLIENT : CSOCK_DEFAULT_SLEEP UNTIL" << "\n";
+                std::cout << "AUTO RECV   DATA : " << recvMessage << "\n";
+                i++;
+                if(i == 5)
+                    break;
+                
+                csock_sleep(1);
+            }
+            else{
+                memset(recvMessage,0,sizeof(recvMessage));
+                std::string userInput;
+                std::cout << "USER INPUT : ";
+                std::getline(std::cin,userInput);
+                sendData(userInput.c_str());
+                recvData(recvMessage,sizeof(recvMessage));
+
+                std::cout << "SENDED DATA : " << userInput << "\n";
+                std::cout << "RECV   DATA : " << recvMessage << "\n";
+
+                if(userInput == "exit")
+                    break;
+            }
+        }
+
+    }
+
 }
+
+
+bool csock::connectServer(const char *connectIP,unsigned int connectPortNo){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE",CSOCK_ERROR,"BASE");
+        return false;
+    }
+    if(isSockConfigSet){
+        csockManuel::csockMessage("SOCKET CONFIG ALREADY SETTED !",CSOCK_ERROR,"BASE");
+        return false;
+    }
+    
+    setConnectedServerConfig(connectIP,connectPortNo);
+    int connectStatus = connect(socketFD,(struct sockaddr*)&sockConnectConfig,sizeof(sockConnectConfig));
+    if(connectStatus == -1){
+        csockManuel::csockMessage("NOT CONNECTED",CSOCK_ERROR,"BASE");
+        return false;
+    }
+
+    return true;
+}
+
+bool csock::connectServer(){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE",CSOCK_ERROR,"BASE");
+        return false;
+    }
+    
+    int connectStatus = connect(socketFD,(struct sockaddr*)&sockConnectConfig,sizeof(sockConnectConfig));
+    if(connectStatus == -1){
+        csockManuel::csockMessage("NOT CONNECTED",CSOCK_ERROR,"BASE");
+        return false;
+    }
+
+    return true;
+}
+
+void csock::setClientConnection(CSOCK_CONNECTION_OPTIONS once_stay){
+    if(!isServer)
+    this->clientConnectType = once_stay;
+    else 
+    csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_WARNING,"BASE");
+}
+
 
 
 //soketi yapilandirmaya baglama ama server

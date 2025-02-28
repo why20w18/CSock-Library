@@ -10,7 +10,7 @@ const char* csockManuel::csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,
     #endif
 }
 
-FILE_DESCRIPTOR csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_udp){
+FILE_DESCRIPTOR csockManuel::csock_socket(CSOCK_INIT ipv4v6 , CSOCK_INIT tcp_udp){
     int socketFD = -1;
 
     #ifdef CSOCK_PLATFORM_IS_WIN32
@@ -18,7 +18,7 @@ FILE_DESCRIPTOR csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_u
         WSAStartup(MAKEWORD(2,2),&wsdata);
         socketFD = socket(ipv4v6,tcp_udp,0);
         if(socketFD == -1){
-            csockMessage("SOCKET NOT OPENED !",CSOCKS_ERROR);
+            csockMessage("SOCKET NOT OPENED !",CSOCK_ERROR);
             return -1;
         }
     #endif 
@@ -26,7 +26,7 @@ FILE_DESCRIPTOR csockManuel::csock_socket(CSOCKS_INIT ipv4v6 , CSOCKS_INIT tcp_u
     #ifdef CSOCK_PLATFORM_IS_UNIX
         socketFD = socket(ipv4v6,tcp_udp,0);
         if(socketFD == -1){
-            csockMessage("SOCKET NOT OPENED !",CSOCKS_ERROR);
+            csockMessage("SOCKET NOT OPENED !",CSOCK_ERROR);
             return -1;
         }
 
@@ -64,7 +64,7 @@ void csockManuel::csock_closeAllClient(std::unordered_map<int,bool>& socketsMap)
 bool csockManuel::csock_bind(int socketFD,struct sockaddr_in *socketConfig,unsigned int socketConfigSize){
     int bindStatus = bind(socketFD,(struct sockaddr*)socketConfig,socketConfigSize);
     if(bindStatus == -1){
-        csockMessage("SOCKET NOT BINDED",CSOCKS_ERROR);
+        csockMessage("SOCKET NOT BINDED",CSOCK_ERROR);
         return false;
     }
     return true;
@@ -78,7 +78,7 @@ bool csockManuel::csock_listener(){
 int csockManuel::csock_send(int socketFD,const char *data,unsigned int dataLength){
     int sendedBytes = send(socketFD,data,dataLength,0);
     if(sendedBytes == -1){
-        csockMessage("NOT SENDED DATA",CSOCKS_ERROR);
+        csockMessage("NOT SENDED DATA",CSOCK_ERROR);
         return -1;
     }
 
@@ -89,7 +89,7 @@ int csockManuel::csock_recv(int socketFD,char *recvDataBuffer , unsigned int rec
     int receivedBytes = recv(socketFD,recvDataBuffer,recvDataSize,0); //server accept ile acilan soket uzerinden
                                                                      //client dogrudan kendi soketinden
     if(receivedBytes == -1){
-        csockMessage("NOT RECEIVED DATA",CSOCKS_ERROR);
+        csockMessage("NOT RECEIVED DATA",CSOCK_ERROR);
         return -1;
     }
     return receivedBytes;
@@ -99,7 +99,7 @@ int csockManuel::csock_recv(int socketFD,char *recvDataBuffer , unsigned int rec
 FILE_DESCRIPTOR csockManuel::csock_accept(int serverFD,struct sockaddr_in *connectedConfig,socklen_t *connectedConfigSize){
     int channelSocket = accept(serverFD,(struct sockaddr*)connectedConfig,connectedConfigSize);
     if(channelSocket == -1){
-        csockMessage("NOT ACCEPTED CLIENT",CSOCKS_ERROR);
+        csockMessage("NOT ACCEPTED CLIENT",CSOCK_ERROR);
         return -1;
     }
 
@@ -107,17 +107,29 @@ FILE_DESCRIPTOR csockManuel::csock_accept(int serverFD,struct sockaddr_in *conne
 }
 
 
+void csockManuel::csock_sleep(unsigned int seconds){
+    #ifdef CSOCK_PLATFORM_IS_WIN32
+        Sleep(seconds);
+    #endif 
 
-void csockManuel::csockMessage(const char *msg,CSOCKS_INFO_LEVEL il,const char *currentFilename){
+    #ifdef CSOCK_PLATFORM_IS_UNIX
+        sleep(seconds);
+    #endif
+}
+
+
+
+
+void csockManuel::csockMessage(const char *msg,CSOCK_INFO_LEVEL il,const char *currentFilename){
     switch(il){
-        case CSOCKS_INFO: std::cout << "[CSOCK-"<< currentFilename <<"-INFO] : " << msg << "\n";
+        case CSOCK_INFO: std::cout << "[CSOCK-"<< currentFilename <<"-INFO] : " << msg << "\n";
         break;
 
-        case CSOCKS_ERROR:
+        case CSOCK_ERROR:
         std::cerr << "[CSOCK-"<< currentFilename <<"-ERROR] : " << msg << "\n";
         break;
 
-        case CSOCKS_WARNING:
+        case CSOCK_WARNING:
         std::cout << "[CSOCK-"<< currentFilename <<"-WARNING] : " << msg << "\n";
         break;
     };

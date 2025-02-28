@@ -17,7 +17,8 @@ SET(DIZIN_SRC ${CMAKE_SOURCE_DIR}/src)
 SET(DIZIN_INCLUDE ${CMAKE_SOURCE_DIR}/include)
 
 SET(PROGRAM_SRC
-    ${DIZIN_SRC}/main.cpp
+    ${DIZIN_SRC}/server.cpp
+    #${DIZIN_SRC}/client.cpp
     ${DIZIN_SRC}/csock.cpp
     ${DIZIN_SRC}/csockManuel.cpp
     

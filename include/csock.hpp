@@ -20,6 +20,7 @@ private:
 
 
     bool isServer;                                                  //server degilse listen edemesin
+    bool isSockConfigSet;
     unsigned int serverBacklog;
 
     //SOKETIN ORTAK OZELLIKLERI BIR NESNE YA SERVER YADA CLIENT OLABILIR
@@ -29,27 +30,43 @@ private:
     int optActive;
     int optDeactive;
 
+    CSOCK_CONNECTION_OPTIONS clientConnectType;
+
 
 public:
-    csock();                                 //default olarak ipv4 ve tcp konfigurasyonu ile baslatma  ->server or client
-    csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6);//soketi manuel olarak yapilandirma ->server or client
-    csock(CSOCKS_INIT tcp_udp , CSOCKS_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo); //->client
+    CONFIG_INIT csock();                                 //default olarak ipv4 ve tcp konfigurasyonu ile baslatma  ->server or client
+    csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6);//soketi manuel olarak yapilandirma ->server or client
+    csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo
+    ,CSOCK_CONNECTION_OPTIONS clientConnectType=CSOCK_ONCE); //->client
     ~csock();                                                                     //destructor
 
     sockaddr_in* setServerSocketConfig(const char *ipAddr,unsigned int portNo);
     sockaddr_in* setConnectedServerConfig(const char *connectIpAddr, unsigned int portNo);
 
 
-    bool setSockOptions(int socketfd,CSOCKS_OPTIONS re_opt);         //socket set options re use port-ip
+    bool setSockOptions(int socketfd,CSOCK_OPTIONS re_opt);         //socket set options re use port-ip
     void setServer(unsigned int serverBacklog);                      //soketi servera cevirme
   
    
     bool bindServerSock();
-    bool serverRequester(const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
-    bool connectServer();
+    bool serverResponser(bool isInputed = false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
+    bool serverResponserThread(const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
+
+
+    CONFIG_INIT bool connectServer();   //konfigurasyondan sonra baslatma
+    DIRECT_INIT bool connectServer(const char *connectIP,unsigned int connectPortNo); //konfigurasyonu icinde baslatir
    
-    int sendData(const char *data);                                 //hem server hem client
-    int recvData(char *recvMessage,int recvMessageSize);            //hem server hem client
+    int sendData(const char *data);                                                       //hem server hem client
+    int recvData(char *recvMessage,int recvMessageSize);                                   //hem server hem client
+
+    
+    
+    //CLIENT BAGLANTISI NASIL KURULACAK//
+    //default olarak baglanip yapacagi islemi yapip baglantiyi kapatir
+    void setClientConnection(CSOCK_CONNECTION_OPTIONS once_stay);
+
+    void clientRequester(bool isClientInputed = false);
+
 
 
     int getSocketFD();                                              //nesnenin kendisine atanmis soketi cevirir
