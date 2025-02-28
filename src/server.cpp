@@ -8,7 +8,7 @@ int main(){
 
     csock serverSocket(TCP,IPV4);
     serverSocket.setServer(CSOCK_DEFAULT_BACKLOG);
-    sockaddr_in *serverConfig = serverSocket.setServerSocketConfig("127.0.0.1",8085);
+    sockaddr_in *serverConfig = serverSocket.setServerSocketConfig("127.0.0.1",CSOCK_DEFAULT_PORT);
     serverSocket.bindServerSock();
 
     //NFO

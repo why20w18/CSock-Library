@@ -160,10 +160,7 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
         while(1){
 
             this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
-            if(clientFD == -1){
-                csockManuel::csockMessage("SOCKET NOT ACCEPTED !",CSOCK_ERROR,"BASE");
-                return false;
-            }
+      
             std::cout << loopMsg << "\n";
 
             char buffer[1024];
@@ -173,7 +170,7 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
                 int reciviedBytes = recvData(buffer,sizeof(buffer));
                 if(reciviedBytes <= 0){
                     csockManuel::csockMessage("CLIENT CONNECTION LOSTED",CSOCK_INFO,"BASE");
-                    break;
+                    return false;
                 }
                     
                 std::cout << "ALINAN BYTE : " << reciviedBytes << "\n";
