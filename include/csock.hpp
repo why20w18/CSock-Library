@@ -5,7 +5,7 @@
 #include <iostream>
 #include <unordered_map> //tum soketleri static olarak listeleme
 
-class csock : public csockManuel{
+class csock : public csockManuel {
 private:
     int socketFD;
     int clientFD;
@@ -35,8 +35,8 @@ private:
 
 
 public:
-    CONFIG_INIT csock();                                 //default olarak ipv4 ve tcp konfigurasyonu ile baslatma  ->server or client
-    csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6);//soketi manuel olarak yapilandirma ->server or client
+    CSOCK_CONFIG_INIT csock();                                 //default olarak ipv4 ve tcp konfigurasyonu ile baslatma  ->server or client
+    csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6);          //soketi manuel olarak yapilandirma ->server or client
     csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo
     ,CSOCK_CONNECTION_OPTIONS clientConnectType=CSOCK_ONCE); //->client
     ~csock();                                                                     //destructor
@@ -50,12 +50,15 @@ public:
   
    
     bool bindServerSock();
-    bool serverResponser(bool isInputed = false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
+    bool serverResponser(bool isPrintOut,bool isInputed=false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
     bool serverResponserThread(bool isInputed = false,const char *msgTitle = "[CSOCK] SERVER LISTENING ...",const char *loopMsg = "1 ENDPOINT ACCEPTED");
+
+    //basic veri alacak ve veri gonderecek sekilde yazilmis responser
+    bool serverResponser(const char *loopMsg,bool isPrintOut = false);
     
 
-    CONFIG_INIT bool connectServer();   //konfigurasyondan sonra baslatma
-    DIRECT_INIT bool connectServer(const char *connectIP,unsigned int connectPortNo); //konfigurasyonu icinde baslatir
+    CSOCK_CONFIG_INIT bool connectServer();   //konfigurasyondan sonra baslatma
+    CSOCK_DIRECT_INIT bool connectServer(const char *connectIP,unsigned int connectPortNo); //konfigurasyonu icinde baslatir
 
     //CLASS ICINDEKI MEMBERLAR UZERINDEN CALISIR
     int sendData(const char *data);                                                       //hem server hem client
@@ -75,7 +78,10 @@ public:
     void clientRequesterThread(int newClientFD,bool isClientInputed = false);
     
 
+    bool setConnectIP(const char *newServerIP);
+    bool setConnectPortNo(uint newServerPortNo);
 
+    
 
     int getSocketFD();                                              //nesnenin kendisine atanmis soketi cevirir
     int* active();

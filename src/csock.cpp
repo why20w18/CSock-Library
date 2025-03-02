@@ -1,10 +1,10 @@
-#include "../include/csock.hpp"
+#include "../../include/csock.hpp"
 
 
 std::unordered_map<int,bool> csock::socketsMap; //static define
 
 //default olarak tcp/ipv4 olarak baslatir
-CONFIG_INIT csock::csock(){
+CSOCK_CONFIG_INIT csock::csock(){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -26,7 +26,7 @@ CONFIG_INIT csock::csock(){
 
 
 //manuel constructor
-CONFIG_INIT csock::csock(CSOCK_INIT tcp_udp, CSOCK_INIT ipv4_ipv6){
+CSOCK_CONFIG_INIT csock::csock(CSOCK_INIT tcp_udp, CSOCK_INIT ipv4_ipv6){
     this->optActive = 1;
     this->optDeactive = 0;
 
@@ -47,7 +47,7 @@ CONFIG_INIT csock::csock(CSOCK_INIT tcp_udp, CSOCK_INIT ipv4_ipv6){
 
 //client icin yazilmis constructor otomatik baglanir 
 //configurasyon gerektirmeyen constructor
-DIRECT_INIT csock::csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo
+CSOCK_DIRECT_INIT csock::csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *connectIP,unsigned int connectPortNo
     ,CSOCK_CONNECTION_OPTIONS once_stay){
     this->optActive = 1;
     this->optDeactive = 0;
@@ -75,15 +75,15 @@ DIRECT_INIT csock::csock(CSOCK_INIT tcp_udp , CSOCK_INIT ipv4_ipv6,const char *c
 
 
 csock::~csock(){
-    csock_close(socketFD,false);
+    csockManuel::csock_close(socketFD,false);
 }
 
 int csock::sendData(const char *data){
     int sendedBytes = -1;
     if(isServer)
-        sendedBytes = csock_send(clientFD,data,strlen(data));
+        sendedBytes =  csockManuel::csock_send(clientFD,data,strlen(data));
     else 
-        sendedBytes = csock_send(socketFD,data,strlen(data));
+        sendedBytes =  csockManuel::csock_send(socketFD,data,strlen(data));
 
     return sendedBytes;
 }
@@ -91,9 +91,9 @@ int csock::sendData(const char *data){
 int csock::sendData(int newClientFD,int newServerFD,const char *data){
     int sendedBytes = -1;
     if(isServer)
-        sendedBytes = csock_send(newClientFD,data,strlen(data));
+        sendedBytes =  csockManuel::csock_send(newClientFD,data,strlen(data));
     else 
-        sendedBytes = csock_send(newServerFD,data,strlen(data));
+        sendedBytes =  csockManuel::csock_send(newServerFD,data,strlen(data));
 
     return sendedBytes;
 }
@@ -104,9 +104,9 @@ int csock::recvData(char *recvMessage,int recvMessageSize){
     int receivedBytes = -1;
     
     if(isServer)
-        receivedBytes = csock_recv(clientFD,recvMessage,recvMessageSize);
+        receivedBytes =  csockManuel::csock_recv(clientFD,recvMessage,recvMessageSize);
     else{
-        receivedBytes = csock_recv(socketFD,recvMessage,recvMessageSize);        
+        receivedBytes =  csockManuel::csock_recv(socketFD,recvMessage,recvMessageSize);        
     }
         
     return receivedBytes;
@@ -117,9 +117,9 @@ int csock::recvData(int newClientFD,int newServerFD,char *recvMessage,int recvMe
     int receivedBytes = -1;
     
     if(isServer)
-        receivedBytes = csock_recv(newClientFD,recvMessage,recvMessageSize);
+        receivedBytes =  csockManuel::csock_recv(newClientFD,recvMessage,recvMessageSize);
     else{
-        receivedBytes = csock_recv(newServerFD,recvMessage,recvMessageSize);        
+        receivedBytes =  csockManuel::csock_recv(newServerFD,recvMessage,recvMessageSize);        
     }
         
     return receivedBytes;
@@ -168,7 +168,7 @@ sockaddr_in* csock::setConnectedServerConfig(const char *connectIpAddr, unsigned
 
 
 
-bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loopMsg){
+bool csock::serverResponser(bool printOut,bool isInputed,const char *msgTitle,const char *loopMsg){
     if(isServer){
         int listenStaus = listen(this->socketFD,this->serverBacklog);
         if(listenStaus == -1){
@@ -178,7 +178,10 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
 
         //server requester loop
         int sendedBytes = 0;
-        std::cout << msgTitle << std::endl;
+        if(printOut)
+            std::cout << msgTitle << std::endl;
+
+
         std::string responseMessageFromServer;
         while(1){
             std::cout << loopMsg << "\n";
@@ -186,7 +189,7 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
             this->clientFD = csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
             if(clientFD == -1){
                 csockManuel::csockMessage("NOT FOUND REQUEST !",CSOCK_INFO,"BASE");
-                csock_sleep(2);
+                csockManuel::csock_sleep(2);
                 continue; //eger istek yoksa server calismaya devam etsin beklesin
             }
             else //baglanti yoksada almak icin bosa beklemesin
@@ -197,8 +200,10 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
                     csockManuel::csockMessage("CLIENT CONNECTION LOSTED",CSOCK_INFO,"BASE");
                     break; //mevcut client baglantisini islemeyi biraktik
                 }
-                    
-                std::cout << "ALINAN BYTE : " << reciviedBytes << "\n";
+                
+                if(printOut)
+                    std::cout << "ALINAN BYTE : " << reciviedBytes << "\n";
+                
                 if(!isInputed)
                     responseMessageFromServer = "SERVER OTOMATIK MESAJI KULLANICI GIRDISIZ";
                 else{
@@ -208,13 +213,17 @@ bool csock::serverResponser(bool isInputed,const char *msgTitle,const char *loop
                 } 
                 sendedBytes = sendData(responseMessageFromServer.c_str());
 
-                std::cout << "GONDERILEN MESAJ : " << responseMessageFromServer << "\n";    
-                std::cout << "GONDERILEN BYTE : " << send << "\n";
-                std::cout << "GELEN MESAJ     : " << buffer << "\n";
+                if(printOut){
+                    std::cout << "GONDERILEN MESAJ : " << responseMessageFromServer << "\n";    
+                    std::cout << "GONDERILEN BYTE : " << send << "\n";
+                    std::cout << "GELEN MESAJ     : " << buffer << "\n";
+                    
+                }
                 
                 csockManuel::csock_inetNtop(initIP_V4_V6,&connectedClientConfig.sin_addr,buffer);
-    
-                DEBUG("FILE DESCRIPTOR : " << clientFD << " STR_IP : " << buffer);
+                
+                if(printOut)
+                    DEBUG("FILE DESCRIPTOR : " << clientFD << " STR_IP : " << buffer);
             }
             
         }
@@ -244,10 +253,10 @@ bool csock::serverResponserThread(bool isInputed,const char *msgTitle,const char
     while(1){
         //server gelen istekleri surekli alacak
         //server surekli ayni clientFD'yi kullanirsa her thread sadece 1 tanesiyle iletisimde kalir digerleri bosta kalir
-        int newClientFD = csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
+        int newClientFD =  csockManuel::csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
         if(clientFD == -1){
             csockManuel::csockMessage("NOT FOUND REQUEST CLIENT",CSOCK_ERROR,"BASE");
-            csock_sleep(2); //eger istek yoksa 2 saniye beklesin tekrar istek var mi kontrol etsin
+            csockManuel::csock_sleep(2); //eger istek yoksa 2 saniye beklesin tekrar istek var mi kontrol etsin
             continue;
         }
         else{
@@ -293,6 +302,47 @@ void csock::serverNewConnectionProcessThread(bool isInputed,int newClientFD){
 
 }
 
+bool csock::serverResponser(const char *loopMsg,bool isPrintOut){
+    if(!isServer){
+        csockManuel::csockMessage("SOCKET NOT SERVER MODE");
+        return false;
+    }
+
+    int listenStatus = listen(this->socketFD,this->serverBacklog);
+    if(listenStatus == -1){
+        csockManuel::csockMessage("SERVER NOT LISTENING !",CSOCK_ERROR,"BASE");
+        return false;
+    }
+
+    int clientFD = csock_accept(socketFD,&connectedClientConfig,&t_clientConnected);
+    if(clientFD == -1){
+        csockManuel::csockMessage("SERVER NOT FOUND REQUEST !",CSOCK_ERROR,"BASE");
+        return false;
+    }
+
+    std::cout << "1 ENDPOINT ACCEPTED !" << "\n";
+
+    char buffer[1024];
+    while(1){
+        std::cout << loopMsg << ":";
+        fflush(stdout);
+
+        //girdi alma
+        memset(buffer,0,sizeof(buffer));
+        fgets(buffer,sizeof(buffer),stdin);
+        csock_send(clientFD,buffer,strlen(buffer));
+
+
+        //veri gelmesi
+        memset(buffer,0,sizeof(buffer));
+        csock_recv(clientFD,buffer,sizeof(buffer));
+        std::cout << "[BUFFER] : " << buffer << "\n";
+    }
+
+
+    return true;
+}
+
 
 
 void csock::clientRequester(bool isClientInputed){
@@ -336,7 +386,7 @@ void csock::clientRequester(bool isClientInputed){
                 if(i == 5)
                     break;
                 
-                csock_sleep(1);
+                    csockManuel::csock_sleep(1);
             }
             else{
                 std::string userInput;
@@ -398,7 +448,7 @@ void csock::clientRequesterThread(int newClientFD,bool isClientInputed){
                 if(i == 5)
                     break;
                 
-                csock_sleep(1);
+                    csockManuel::csock_sleep(1);
             }
             else{
                 std::string userInput;
@@ -462,6 +512,27 @@ void csock::setClientConnection(CSOCK_CONNECTION_OPTIONS once_stay){
 }
 
 
+bool csock::setConnectIP(const char *newServerIP){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_WARNING,"BASE");
+        return false;
+    }
+
+    this->connectedClientConfig.sin_addr.s_addr = inet_addr(newServerIP);
+    return true;
+}
+
+bool csock::setConnectPortNo(uint newServerPortNo){
+    if(isServer){
+        csockManuel::csockMessage("SOCKET IS SERVER MODE !",CSOCK_WARNING,"BASE");
+        return false;
+    }
+
+    this->connectedClientConfig.sin_port = htons(newServerPortNo);
+    return true;
+}
+
+
 
 //soketi yapilandirmaya baglama ama server
 bool csock::bindServerSock(){
@@ -491,7 +562,7 @@ void csock::allSockets(){
     }
 }
 
-
-
-
+int csock::getSocketFD(){
+    return this->socketFD;
+}
 

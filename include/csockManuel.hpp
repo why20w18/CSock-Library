@@ -8,9 +8,9 @@
 class csockManuel{
     /////////////////       /////   CSOCK MANUEL CROSS FUNCTION       /////   /////////////////
 
-protected:
+public:
     //internet to presentation => sayisal ip adresini stringe cevirir
-    const char* csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer , socklen_t bufferSize = INET_ADDRSTRLEN);
+    const char* csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer);
     
     //soket olusturup filedescriptor cevirir
     FILE_DESCRIPTOR csock_socket(CSOCK_INIT ipv4v6 , CSOCK_INIT tcp_udp);

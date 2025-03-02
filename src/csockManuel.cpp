@@ -1,12 +1,12 @@
-#include "../include/csockManuel.hpp"
+#include "../../include/csockManuel.hpp"
 
-const char* csockManuel::csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer , socklen_t bufferSize){
+const char* csockManuel::csock_inetNtop(int ipv4v6,const void *connectedCfgAddr,char *buffer){
     #ifdef CSOCK_PLATFORM_IS_WIN32
-        return InetNtop(ipv4v6,connectedCfgAddr,buffer,bufferSize);
+        return InetNtop(ipv4v6,connectedCfgAddr,buffer,CSOCK_IP_STRLEN);
     #endif 
 
     #ifdef CSOCK_PLATFORM_IS_UNIX
-        return inet_ntop(ipv4v6,connectedCfgAddr,buffer,bufferSize);
+        return inet_ntop(ipv4v6,connectedCfgAddr,buffer,CSOCK_IP_STRLEN);
     #endif
 }
 
